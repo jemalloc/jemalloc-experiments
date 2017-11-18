@@ -13,9 +13,9 @@ inline std::uint64_t rdtsc() noexcept {
 }
 
 // begin and end must be a multiple of 64.
-inline void flushCache(void* beginv, void* endv) {
+inline void flushCache(void* beginv, std::size_t size) {
   char* begin = static_cast<char*>(beginv);
-  char* end = static_cast<char*>(endv);
+  char* end = begin + size;
 
   for (char* ptr = begin; ptr != end; ptr += 64) {
     __builtin_ia32_clflush(static_cast<void*>(ptr));
