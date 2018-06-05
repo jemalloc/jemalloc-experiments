@@ -4,8 +4,12 @@
 
 // Allocation
 
-bool Allocation::operator<(const Allocation &that) const {
+bool Allocation::operator<(const Allocation& that) const {
   return this->toFree_ < that.toFree_;
+}
+
+bool Allocation::operator>(const Allocation& that) const {
+  return !(*this < that);
 }
 
 bool Allocation::isEmpty() const { return this->toFree_.size() == 0; }
@@ -40,9 +44,9 @@ Allocation SimpleProducer::run() const {
   return std::move(Allocation());
 }
 
-void swap(Allocation &a1, Allocation &a2) {
-	a1.toFree_.swap(a2.toFree_);
-	std::swap(a1.freeAfter_, a2.freeAfter_);
+void swap(Allocation& a1, Allocation& a2) {
+  a1.toFree_.swap(a2.toFree_);
+  std::swap(a1.freeAfter_, a2.freeAfter_);
 }
 
 // Vector Producer

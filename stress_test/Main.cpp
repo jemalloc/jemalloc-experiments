@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <thread>
 #include <vector>
 
 #include <gflags/gflags.h>
@@ -7,22 +8,51 @@
 #include "Mixer.h"
 
 DEFINE_int32(num_producers, 100, "number of producers to run");
+DEFINE_int32(num_threads, 1, "number of threads to run");
+
+using std::shared_ptr;
+using std::vector;
+
+void createAndRunMixer(vector<shared_ptr<Producer>> producers, int me,
+                       vector<shared_ptr<ToFreeQueue>> toFreeQueues) {
+  Mixer m(producers, FLAGS_num_producers, me, toFreeQueues);
+  m.run();
+}
 
 int main(int argc, char **argv) {
-
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  vector<std::unique_ptr<Producer>> producers;
-  producers.push_back(std::move(std::make_unique<SimpleProducer>(8, 100000)));
-  producers.push_back(std::move(std::make_unique<VectorProducer>(
-      100000, std::chrono::duration<double>(1.0))));
+  // Initialize producers
+  vector<shared_ptr<Producer>> producers;
+  producers.push_back(
+      shared_ptr<SimpleProducer>(new SimpleProducer(8, 100000)));
+  producers.push_back(shared_ptr<VectorProducer>(
+      new VectorProducer(100000, std::chrono::duration<double>(1.0))));
+
+  // Set up a work queue for each thread
+  vector<std::thread> threads;
+  vector<shared_ptr<ToFreeQueue>> toFreeQueues;
+  for (int i = 0; i < FLAGS_num_threads; i++) {
+    auto toFreeQ = shared_ptr<ToFreeQueue>(new ToFreeQueue());
+    toFreeQueues.push_back(toFreeQ);
+  }
+
+  for (int i = 0; i < FLAGS_num_threads; i++) {
+    // each thread gets an arbitrary id given by [i]
+    threads.push_back(
+        std::thread(createAndRunMixer, producers, i, toFreeQueues));
+  }
 
   using namespace std::chrono;
 
-  Mixer m(std::move(producers), FLAGS_num_producers);
-
   high_resolution_clock::time_point beginTime = high_resolution_clock::now();
-  m.run();
+  for (auto& t : threads) {
+    t.join();
+  }
+  // Cleanup any remaining memory
+  for (int i = 0; i < FLAGS_num_threads; i++) {
+    toFreeQueues[i]->freeIgnoreLifetime();
+  }
   high_resolution_clock::time_point endTime = high_resolution_clock::now();
 
   duration<double> span = duration_cast<duration<double>>(endTime - beginTime);
