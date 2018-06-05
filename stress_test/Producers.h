@@ -7,6 +7,7 @@ class Allocation {
 public:
   // sorts based on [freeAfter] field
   bool operator<(const Allocation &that) const;
+  bool operator>(const Allocation &that) const;
   // true iff [this->toFree_] is empty
   bool isEmpty() const;
   std::chrono::high_resolution_clock::time_point freeAfter() const;

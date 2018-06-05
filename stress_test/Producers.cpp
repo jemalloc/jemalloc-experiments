@@ -8,6 +8,10 @@ bool Allocation::operator<(const Allocation &that) const {
   return this->toFree_ < that.toFree_;
 }
 
+bool Allocation::operator>(const Allocation &that) const {
+	return !(*this < that);
+}
+
 bool Allocation::isEmpty() const { return this->toFree_.size() == 0; }
 
 std::chrono::high_resolution_clock::time_point Allocation::freeAfter() const {
