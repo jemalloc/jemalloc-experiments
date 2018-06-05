@@ -8,6 +8,10 @@ bool Allocation::operator<(const Allocation &that) const {
   return this->toFree_ < that.toFree_;
 }
 
+bool Allocation::operator>(const Allocation &that) const {
+  return !(*this < that);
+}
+
 bool Allocation::isEmpty() const { return this->toFree_.size() == 0; }
 
 std::chrono::high_resolution_clock::time_point Allocation::freeAfter() const {
@@ -41,8 +45,8 @@ Allocation SimpleProducer::run() const {
 }
 
 void swap(Allocation &a1, Allocation &a2) {
-	a1.toFree_.swap(a2.toFree_);
-	std::swap(a1.freeAfter_, a2.freeAfter_);
+  a1.toFree_.swap(a2.toFree_);
+  std::swap(a1.freeAfter_, a2.freeAfter_);
 }
 
 // Vector Producer

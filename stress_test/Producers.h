@@ -7,6 +7,7 @@ class Allocation {
 public:
   // sorts based on [freeAfter] field
   bool operator<(const Allocation &that) const;
+  bool operator>(const Allocation &that) const;
   // true iff [this->toFree_] is empty
   bool isEmpty() const;
   std::chrono::high_resolution_clock::time_point freeAfter() const;
@@ -19,15 +20,15 @@ public:
   Allocation(Allocation const &) = delete;
   Allocation &operator=(Allocation const &) = delete;
 
-	// must define a move constructor since we deleted the copy constructor
-	Allocation(Allocation&&) = default;
-	Allocation& operator=(Allocation&&) = default;
+  // must define a move constructor since we deleted the copy constructor
+  Allocation(Allocation &&) = default;
+  Allocation &operator=(Allocation &&) = default;
 
-	// The destructor deallocates the memory in [toFree_]
+  // The destructor deallocates the memory in [toFree_]
   ~Allocation();
 
-	// needed to sort
-	friend void swap(Allocation &a1, Allocation &a2);
+  // needed to sort
+  friend void swap(Allocation &a1, Allocation &a2);
 
 private:
   std::vector<void *> toFree_;
