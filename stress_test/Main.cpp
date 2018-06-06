@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
   vector<shared_ptr<Producer>> producers;
   producers.push_back(make_shared<SimpleProducer>(8, 100000));
   producers.push_back(make_shared<VectorProducer>(100000, std::chrono::duration<double>(1.0)));
+  producers.push_back(make_shared<LinkedListProducer>(8, 100000, std::chrono::duration<double>(1.0)));
 
 	// Set up a work queue for each thread
   vector<std::thread> threads;

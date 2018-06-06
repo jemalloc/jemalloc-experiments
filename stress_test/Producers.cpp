@@ -51,12 +51,18 @@ void swap(Allocation &a1, Allocation &a2) {
 
 // Vector Producer
 
-VectorProducer::VectorProducer(int vectorSize,
+VectorProducer::VectorProducer(size_t vectorSize,
                                std::chrono::duration<double> lifetime)
-    : vectorSize_(vectorSize), lifetime_(lifetime), shouldFree_(true) {}
+    : vectorSize_(vectorSize), lifetime_(lifetime) {}
 
-VectorProducer::VectorProducer(int vectorSize)
-    : vectorSize_(vectorSize), lifetime_(0.0), shouldFree_(true) {}
+std::chrono::high_resolution_clock::time_point addToNow(std::chrono::duration<double> d) {
+	using namespace std::chrono;
+	high_resolution_clock::time_point t = high_resolution_clock::now();
+	high_resolution_clock::duration dHighResolution =
+			duration_cast<high_resolution_clock::duration>(d);
+	t += dHighResolution;;
+	return t;
+}
 
 Allocation VectorProducer::run() const {
   void *ptr = malloc(1);
@@ -66,16 +72,23 @@ Allocation VectorProducer::run() const {
     currSize *= 2;
     ptr = malloc(currSize);
   }
-  if (this->shouldFree_) {
-    free(ptr);
-    return Allocation();
-  } else {
 
-    using namespace std::chrono;
-    high_resolution_clock::time_point t = high_resolution_clock::now();
-    high_resolution_clock::duration d =
-        duration_cast<high_resolution_clock::duration>(this->lifetime_);
-    t += d;
-    return std::move(Allocation(std::vector<void *>({ptr}), t));
-  }
+	return std::move(Allocation(std::vector<void *>({ptr}), addToNow(this->lifetime_)));
 }
+
+// LinkedList Producer
+
+Allocation LinkedListProducer::run() const {
+
+	std::vector<void *> toFree;
+	toFree.reserve(this->numNodes_);
+
+	for (int i = 0; i < this->numNodes_; i++) {
+		toFree.push_back(malloc(this->nodeSize_));
+	}
+	
+	return std::move(Allocation(toFree, addToNow(this->lifetime_)));
+}
+// allocate [numNodes] blocks of size [nodeSize] with lifetime [lifetime]
+LinkedListProducer::LinkedListProducer(size_t nodeSize, int numNodes, std::chrono::duration<double> lifetime) :
+	nodeSize_(nodeSize), numNodes_(numNodes), lifetime_(lifetime) {}

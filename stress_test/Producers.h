@@ -41,19 +41,16 @@ public:
   virtual Allocation run() const = 0;
 };
 
-// allocates a vector of size [sz] and then frees it
+// allocates a vector of size [sz]
 class VectorProducer : public Producer {
 public:
   Allocation run() const;
   // allocate, and then free after [lifetime] has elapsed
-  VectorProducer(int vectorSize, std::chrono::duration<double> lifetime);
-  // allocate and then free immediately
-  VectorProducer(int vectorSize);
+  VectorProducer(size_t vectorSize, std::chrono::duration<double> lifetime);
 
 private:
-  int vectorSize_;
+  size_t vectorSize_;
   std::chrono::duration<double> lifetime_;
-  bool shouldFree_;
 };
 
 /* allocates a block of size [alloc_sz], and then immediately frees it. Repeats
@@ -62,8 +59,19 @@ class SimpleProducer : public Producer {
 public:
   Allocation run() const;
   SimpleProducer(int allocSize, int numAllocs);
-
 private:
   int allocSize_;
   int numAllocs_;
+};
+
+// Allocates many similarly sized blocks, and then frees them all at once later.
+class LinkedListProducer : public Producer {
+public:
+	Allocation run() const;
+	// allocate [numNodes] blocks of size [nodeSize] with lifetime [lifetime]
+	LinkedListProducer(size_t nodeSize, int numNodes, std::chrono::duration<double> lifetime);	
+private:
+	size_t nodeSize_;
+	int numNodes_;
+	std::chrono::duration<double> lifetime_;
 };
