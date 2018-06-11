@@ -46,10 +46,11 @@ class VectorProducer : public Producer {
 public:
   Allocation run() const;
   // allocate, and then free after [lifetime] has elapsed
-  VectorProducer(size_t vectorSize, std::chrono::duration<double> lifetime);
+  VectorProducer(size_t vectorSize, std::chrono::duration<double> lifetime, size_t initialSize);
 
 private:
   size_t vectorSize_;
+	size_t initialSize_;
   std::chrono::duration<double> lifetime_;
 };
 

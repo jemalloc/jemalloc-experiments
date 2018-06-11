@@ -52,8 +52,9 @@ void swap(Allocation &a1, Allocation &a2) {
 // Vector Producer
 
 VectorProducer::VectorProducer(size_t vectorSize,
-                               std::chrono::duration<double> lifetime)
-    : vectorSize_(vectorSize), lifetime_(lifetime) {}
+                               std::chrono::duration<double> lifetime,
+															 size_t initialSize)
+    : vectorSize_(vectorSize), lifetime_(lifetime), initialSize_(initialSize) {}
 
 std::chrono::high_resolution_clock::time_point addToNow(std::chrono::duration<double> d) {
 	using namespace std::chrono;
@@ -65,8 +66,9 @@ std::chrono::high_resolution_clock::time_point addToNow(std::chrono::duration<do
 }
 
 Allocation VectorProducer::run() const {
-  void *ptr = malloc(1);
-  size_t currSize = 1;
+	
+  void *ptr = malloc(this->initialSize_);
+  size_t currSize = this->initialSize_;
   while (currSize < this->vectorSize_) {
     free(ptr);
     currSize *= 2;
