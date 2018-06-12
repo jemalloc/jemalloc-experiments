@@ -1,7 +1,12 @@
 #include "Mixer.h"
 
+#include <cstdint>
+#include <iostream>
+
 #include <gflags/gflags.h>
 #include <jemalloc/jemalloc.h>
+#include <stdlib.h>
+#include <sys/mman.h>
 
 DEFINE_int32(producer_duration, 10000, "scales the length of producers. Making"
 		"this number higher means each producer runs for a long time.");
@@ -62,11 +67,59 @@ ToFreeQueue& Mixer::pickConsumer() {
   return *(this->toFreeQueues_[consumerIndex]);
 }
 
+constexpr size_t kMaxDataCacheSize = 8000000;
+constexpr size_t kMaxInstCacheSize = 32000;
+
+static char dataBurner[kMaxDataCacheSize] = {0};
+static char *instBurner = nullptr;
+
+constexpr unsigned char instRet = { 0xC3 };
+constexpr unsigned char instNop = { 0x90 };
+
+void burnDataCache(size_t n) {
+	// Do something slightly non-trivial so this doesn't get optimized away
+	size_t nClipped = (n > kMaxDataCacheSize)? kMaxDataCacheSize : n;
+	char c = dataBurner[0];
+	for (int i = 0; i < nClipped; i++) {
+		dataBurner[i] = c + 1;
+	}
+}
+
+void burnInstCache(size_t n) {
+	// initialize if null
+	size_t sz = kMaxInstCacheSize + 1;
+	if (instBurner == nullptr) {
+		instBurner = (char*) mmap(NULL, sz, PROT_READ | PROT_WRITE,
+															MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		char *p = instBurner;
+		for (int i = 0; i < sz - 1; ++i) {
+			*(p++) = instNop;
+		}
+		*(p++) = instRet;
+		if (mprotect(instBurner, sz, PROT_NONE) == -1) {
+			std::cout << "mprotect failed" << std::endl;
+			exit(1);
+		}
+		if (mprotect(instBurner, sz, PROT_EXEC | PROT_READ) == -1) {
+			std::cout << "mprotect failed" << std::endl;
+			exit(1);
+		}
+	}
+
+	int nClipped = (n > kMaxInstCacheSize)? kMaxInstCacheSize : n;
+	int offset = kMaxInstCacheSize - nClipped;
+
+	void (*f)() = (void (*)())(instBurner + offset);
+	(*f)();
+}
+
 void Mixer::run() {
   while (this->producersRemaining_ > 0) {
     this->toFreeQueues_[this->me_]->free();
 		// otherwise run a random producer
 		Allocation a = this->pickProducer().run();
+		burnInstCache(kMaxInstCacheSize);
+		burnDataCache(kMaxDataCacheSize / 8);
 		if (!a.isEmpty()) {
 			this->pickConsumer().addToFree(std::move(a));
 		}
