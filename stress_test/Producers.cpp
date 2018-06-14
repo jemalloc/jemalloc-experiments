@@ -1,96 +1,125 @@
 #include "Producers.h"
 
 #include <iostream>
+#include <stdlib.h>
 
-// Allocation
-
-bool Allocation::operator<(const Allocation &that) const {
-  return this->toFree_ < that.toFree_;
-}
-
-bool Allocation::operator>(const Allocation &that) const {
-	return !(*this < that);
-}
-
-bool Allocation::isEmpty() const { return this->toFree_.size() == 0; }
-
-std::chrono::high_resolution_clock::time_point Allocation::freeAfter() const {
-  return this->freeAfter_;
-}
-
-Allocation::Allocation(std::vector<void *> toFree,
-                       std::chrono::high_resolution_clock::time_point freeAfter)
-    : toFree_(toFree), freeAfter_(freeAfter) {}
-
-Allocation::~Allocation() {
-  for (auto it = begin(this->toFree_); it != end(this->toFree_); ++it) {
-    free(*it);
+void *allocateAndUse(ThreadObject &myThread, size_t &memUsed, size_t sz) {
+  void *ptr = myThread.allocate(sz);
+  memUsed += sz;
+  if (ptr != nullptr) {
+    memset(ptr, 0, sz);
   }
+  return ptr;
 }
 
 // Simple Producer
 
 SimpleProducer::SimpleProducer(int allocSize, int numAllocs)
-    : allocSize_(allocSize), numAllocs_(numAllocs) {}
-
-Allocation SimpleProducer::run() const {
-  for (int i = 0; i < this->numAllocs_; i++) {
-    char *ptr = (char *)calloc(this->allocSize_, sizeof(char));
-    if (ptr == NULL) {
-      std::cout << "allocation failed" << std::endl;
+    : allocSize_(allocSize), allocsLeft_(numAllocs) {}
+Allocation SimpleProducer::run(ThreadObject &myThread, size_t memUsageHint,
+                               ProducerStatus &retStatus) {
+  size_t memUsed = 0;
+  while (true) {
+    if (this->allocsLeft_ <= 0) {
+      retStatus = ProducerStatus::Done;
+      return Allocation();
     }
+    if (memUsed >= memUsageHint) {
+      retStatus = ProducerStatus::Yield;
+      return Allocation();
+    }
+    void *ptr = allocateAndUse(myThread, memUsed, this->allocSize_);
+    if (ptr == nullptr) {
+      retStatus = ProducerStatus::AllocationFailed;
+      return Allocation();
+    }
+    this->allocsLeft_ -= 1;
     free(ptr);
   }
-  return std::move(Allocation());
 }
 
-void swap(Allocation &a1, Allocation &a2) {
-	a1.toFree_.swap(a2.toFree_);
-	std::swap(a1.freeAfter_, a2.freeAfter_);
-}
+void SimpleProducer::cleanup() {}
 
 // Vector Producer
 
-VectorProducer::VectorProducer(size_t vectorSize,
-                               std::chrono::duration<double> lifetime,
-															 size_t initialSize)
-    : vectorSize_(vectorSize), lifetime_(lifetime), initialSize_(initialSize) {}
+VectorProducer::VectorProducer(size_t maxSize, size_t initialSize, int lifetime)
+    : maxSize_(maxSize), initialSize_(initialSize), currentSize_(0),
+      ptr_(nullptr), lifetime_(lifetime) {}
 
-std::chrono::high_resolution_clock::time_point addToNow(std::chrono::duration<double> d) {
-	using namespace std::chrono;
-	high_resolution_clock::time_point t = high_resolution_clock::now();
-	high_resolution_clock::duration dHighResolution =
-			duration_cast<high_resolution_clock::duration>(d);
-	t += dHighResolution;;
-	return t;
-}
+Allocation VectorProducer::run(ThreadObject &myThread, size_t memUsageHint,
+                               ProducerStatus &retStatus) {
+  size_t memUsed = 0;
 
-Allocation VectorProducer::run() const {
-	
-  void *ptr = malloc(this->initialSize_);
-  size_t currSize = this->initialSize_;
-  while (currSize < this->vectorSize_) {
-    free(ptr);
-    currSize *= 2;
-    ptr = malloc(currSize);
+  if (this->currentSize_ == 0) {
+    this->ptr_ = allocateAndUse(myThread, memUsed, this->initialSize_);
+    if (this->ptr_ == nullptr) {
+      retStatus = ProducerStatus::AllocationFailed;
+      return Allocation();
+    }
+    this->currentSize_ = this->initialSize_;
   }
 
-	return std::move(Allocation(std::vector<void *>({ptr}), addToNow(this->lifetime_)));
+  while (true) {
+    if (this->currentSize_ >= this->maxSize_) {
+      retStatus = ProducerStatus::Done;
+      return Allocation({this->ptr_}, this->lifetime_);
+    }
+    if (memUsed >= memUsageHint) {
+      retStatus = ProducerStatus::Yield;
+      return Allocation();
+    }
+
+    free(this->ptr_);
+    this->currentSize_ *= 2;
+    this->ptr_ = allocateAndUse(myThread, memUsed, this->currentSize_);
+    if (ptr_ == nullptr) {
+      retStatus = ProducerStatus::AllocationFailed;
+      return Allocation();
+    }
+  }
+}
+
+void VectorProducer::cleanup() {
+  if (this->ptr_ != nullptr) {
+    free(this->ptr_);
+  }
 }
 
 // LinkedList Producer
 
-Allocation LinkedListProducer::run() const {
+Allocation LinkedListProducer::run(ThreadObject &myThread, size_t memUsageHint,
+                                   ProducerStatus &retStatus) {
+  size_t memUsed = 0;
 
-	std::vector<void *> toFree;
-	toFree.reserve(this->numNodes_);
-
-	for (int i = 0; i < this->numNodes_; i++) {
-		toFree.push_back(malloc(this->nodeSize_));
-	}
-	
-	return std::move(Allocation(toFree, addToNow(this->lifetime_)));
+  while (true) {
+    if (this->nodesRemaining_ <= 0) {
+      retStatus = ProducerStatus::Done;
+      return Allocation(std::move(this->toFree_), this->lifetime_);
+    }
+    if (memUsed >= memUsageHint) {
+      retStatus = ProducerStatus::Yield;
+      return Allocation();
+    }
+    void *newNode = allocateAndUse(myThread, memUsed, this->nodeSize_);
+    if (newNode == nullptr) {
+      retStatus = ProducerStatus::AllocationFailed;
+      return Allocation();
+    }
+    nodesRemaining_ -= 1;
+    this->toFree_.push_back(newNode);
+  }
 }
+
+void LinkedListProducer::cleanup() {
+  for (auto &ptr : this->toFree_) {
+    free(ptr);
+  }
+}
+
 // allocate [numNodes] blocks of size [nodeSize] with lifetime [lifetime]
-LinkedListProducer::LinkedListProducer(size_t nodeSize, int numNodes, std::chrono::duration<double> lifetime) :
-	nodeSize_(nodeSize), numNodes_(numNodes), lifetime_(lifetime) {}
+LinkedListProducer::LinkedListProducer(size_t nodeSize, int numNodes,
+                                       int lifetime)
+    : nodeSize_(nodeSize), nodesRemaining_(numNodes), lifetime_(lifetime),
+      toFree_() {
+  this->toFree_.reserve(numNodes);
+}
