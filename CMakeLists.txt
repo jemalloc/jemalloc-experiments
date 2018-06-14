@@ -12,6 +12,6 @@ SET(JEMALLOC_LINK_FLAGS "-ljemalloc -lm -lpthread")
 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${JEMALLOC_COMPILE_FLAGS}")
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${JEMALLOC_LINK_FLAGS}")
-add_executable(stress stress_test/Main.cpp stress_test/Producers.cpp stress_test/Mixer.cpp stress_test/ToFreeQueue.cpp stress_test/Distribution.cpp)
+add_executable(stress stress_test/Main.cpp stress_test/Producers.cpp stress_test/Mixer.cpp stress_test/ThreadObject.cpp stress_test/Distribution.cpp stress_test/Allocation.cpp)
 set_property(TARGET stress PROPERTY CXX_STANDARD 14)
 target_link_libraries(stress PRIVATE gflags)
