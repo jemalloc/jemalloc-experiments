@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 
+#include <assert.h>
 #include <gflags/gflags.h>
 #include <jemalloc/jemalloc.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@
 
 #include "SizeConstants.h"
 
-using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
