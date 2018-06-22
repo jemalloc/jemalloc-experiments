@@ -1,4 +1,5 @@
 #include "Allocation.h"
+#include <jemalloc/jemalloc.h>
 
 bool Allocation::operator<(const Allocation &that) const {
   return this->freeAfterAbsolute < that.freeAfterAbsolute;

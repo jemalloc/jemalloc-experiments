@@ -6,6 +6,7 @@
 #include <mutex>
 #include <thread>
 
+#include <assert.h>
 #include <gflags/gflags.h>
 
 #include "SizeConstants.h"
