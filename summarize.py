@@ -4,7 +4,7 @@
 # merged arena stats, so if you expose stats output on some webserver status
 # path, the right command is something like:
 #
-# wget -O my_stats.json server:port/pprof/mallocstats?opt=JMa
+# wget -O my_stats.json server:port/pprof/mallocstats?opts=JMa
 # summarize.py my_stats.json
 
 import json
