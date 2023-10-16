@@ -40,8 +40,8 @@ void doThreadMigrations(
     URNG& urng,
     std::vector<void*>& batch,
     std::vector<std::atomic<void*>>& sharedBuffer) {
-  std::uniform_int_distribution<int> sharedDist(0, sharedBuffer.size());
-  std::uniform_int_distribution<int> localDist(0, batch.size());
+  std::uniform_int_distribution<int> sharedDist(0, sharedBuffer.size() - 1);
+  std::uniform_int_distribution<int> localDist(0, batch.size() - 1);
 
   for (int i = 0; i < FLAGS_batch_thread_migrations; ++i) {
     int localIndex = localDist(urng);
