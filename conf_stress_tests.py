@@ -42,9 +42,9 @@ def main():
     malloc_configs = [
         'tcache:false,prof:false',
         'tcache:false,prof:true,lg_prof_sample:13',
-        'tcache:true,prof:false,lg_prof_sample:13,ncached_max:1-1024:100|1025-2048:1|2049-1000000:0,tcache_max:4096',
-        'tcache:true,prof:true,lg_prof_sample:13,ncached_max:1-1024:100|1025-99999:1|2049-1000000:0,tcache_max:4096',
-        'tcache:true,prof:true,lg_prof_sample:13,ncached_max:1-1024:100|1025-99999:1|2049-1000000:0,tcache_max:4096,percpu_arena:percpu'
+        'tcache:true,prof:false,lg_prof_sample:13,tcache_ncached_max:1-1024:100|1025-2048:1|2049-1000000:0,tcache_max:4096',
+        'tcache:true,prof:true,lg_prof_sample:13,tcache_ncached_max:1-1024:100|1025-99999:1|2049-1000000:0,tcache_max:4096',
+        'tcache:true,prof:true,lg_prof_sample:13,tcache_ncached_max:1-1024:100|1025-99999:1|2049-1000000:0,tcache_max:4096,percpu_arena:percpu'
     ]
 
     for config in malloc_configs:
