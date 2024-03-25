@@ -2,6 +2,7 @@
 
 #include <random>
 #include <vector>
+#include <memory>
 
 #include "Distribution.h"
 #include "Producers.h"
